@@ -29,8 +29,8 @@ struct E24LC256 {
     uint8_t read(uint16_t address) {                          // Read a single byte from the memory address given.
       if (ackPolling()) {                                     // Make sure the EEPROM is ready to communicate.
         Wire.beginTransmission(I2CAddress);
-        Wire.write(address >> 8);
-        Wire.write(address & 0xFF);
+        Wire.write((byte) (address >> 8));
+        Wire.write((byte) (address & 0xFF));
         Wire.endTransmission();
         Wire.requestFrom(I2CAddress, (uint8_t) 1);
         return Wire.read();
@@ -40,8 +40,8 @@ struct E24LC256 {
     void write(uint16_t address, uint8_t data) {              // Write a single byte to the memory address given.
       if (ackPolling()) {                                     // Make sure the EEPROM is ready to communicate.
         Wire.beginTransmission(I2CAddress);
-        Wire.write((byte) address >> 8);
-        Wire.write((byte) address & 0xFF);
+        Wire.write((byte) (address >> 8));
+        Wire.write((byte) (address & 0xFF));
         Wire.write((byte) data);
         Wire.endTransmission();
       }
@@ -138,8 +138,8 @@ struct E24LC256 {
 
     void readBytes (uint16_t address, uint8_t *ptr, uint8_t nBytes) {
       Wire.beginTransmission(I2CAddress);
-      Wire.write((address) >> 8);
-      Wire.write((address) & 0xFF);
+      Wire.write((byte) (address >> 8));
+      Wire.write((byte) (address & 0xFF));
       Wire.endTransmission();
       Wire.requestFrom(I2CAddress, nBytes);
       for (uint8_t j = 0; j < nBytes; j++) {
