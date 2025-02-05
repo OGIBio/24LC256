@@ -46,12 +46,16 @@ struct E24LC256 {
         Wire.endTransmission();
       }
     }
+    template<typename T>
+    void write(uint16_t address, T data) = delete;            // Prevent accidental use of types other than `uint8_t`
 
     void update(uint16_t address, uint8_t data) {             // Write a single byte to the memory address given
       // if it's different from the current value.
       uint8_t a = read(address);
       if (a != data) write(address, data);
     }
+    template<typename T>
+    void update(uint16_t address, T data) = delete;           // Prevent accidental use of types other than `uint8_t`
 
     Status getStatus() {
       return EEPROMStatus;
