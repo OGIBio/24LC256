@@ -35,6 +35,7 @@ struct E24LC256 {
         Wire.requestFrom(I2CAddress, (uint8_t) 1);
         return Wire.read();
       }
+      return 0;
     }
 
     void write(uint16_t address, uint8_t data) {              // Write a single byte to the memory address given.
