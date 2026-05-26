@@ -88,3 +88,66 @@ bool E24LC256::ackPolling() {  // Poll the IC to make sure it's ready for commun
   }
   return (code == 0);
 }
+
+void E24LC256::_put(uint16_t address, uint8_t *ptr, uint16_t nBytes) {
+#ifdef ESP8266
+  const uint16_t pageSize = 64;  // Page size of the EEPROM (ESP's I2C buffer is 128 bytes).
+#else
+  const uint16_t pageSize = 32;  // The size of the I2C buffer for AVR Arduinos, use that for page size.
+#endif
+
+  /* We have three potential numbers of bytes to write:
+   * 1) The maximum we can fit in the buffer - although the buffer is `pageSize`,
+   *    during read/write operations two of those bytes are just for the address,
+   *    leaving `pageSize - 2` bytes for data.
+   * 2) The number of bytes until the page boundary
+   * 3) The remaining size of the data structure
+   *
+   * We can only ever write the smallest of these numbers. Once written,
+   * update the address, ptr values and remaining size.
+   * If remaining size is zero, we're done.
+   */
+
+  const uint16_t putSize     = pageSize - 2;  // Max buffer size
+  uint16_t remainingDataSize = nBytes;        // Remaining number of bytes to write
+
+  while (remainingDataSize > 0) {
+    uint16_t remainingPageSize = pageSize * (address / pageSize + 1) - address;  // Bytes until the next page boundary.
+
+    uint16_t nbytes            = putSize;
+    if (remainingPageSize < nbytes) { nbytes = remainingPageSize; }
+    if (remainingDataSize < nbytes) { nbytes = remainingDataSize; }
+
+    if (!ackPolling()) {
+      return;
+    }
+
+    readBytes(address, readBuffer, nbytes);  // Read the first page, and compare it.
+    if (compareBytes(readBuffer, ptr, nbytes) == false) {
+      writeBytes(address, ptr, nbytes);  // If page different: write the new data to the EEPROM.
+      ackPolling();                      // Wait for EEPROM to finish writing before continuing with the next block.
+    }
+    address += nbytes;
+    ptr += nbytes;
+    remainingDataSize -= nbytes;
+  }
+}
+
+void E24LC256::_get(uint16_t address, uint8_t *ptr, uint16_t nBytes) {
+#ifdef ESP8266
+  const uint8_t bufferSize = 128;  // ESP8266's default I2C buffer size - don't read more than that in one go.
+#else
+  const uint8_t bufferSize = 32;  // Arduino's default I2C buffer size - don't read more than that in one go.
+#endif
+
+  if (ackPolling()) {                                    // Make sure the EEPROM is ready to communicate.
+    for (uint16_t i = 0; i < nBytes; i += bufferSize) {  // We have to read data bufferSize bytes (or less) at a time.
+      uint8_t block = bufferSize;
+      if (nBytes - i < bufferSize) {  // Calculate remainder, if less than bufferSize bytes left to read.
+        block = nBytes - i;
+      }
+      readBytes(address + i, ptr, block);
+      ptr += block;
+    }
+  }
+}
